@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lean Improvement Case Studies</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'JuliaMono';
+            src: url('https://cdn.jsdelivr.net/gh/cormullion/juliamono/webfonts/JuliaMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'JuliaMono';
+            src: url('https://cdn.jsdelivr.net/gh/cormullion/juliamono/webfonts/JuliaMono-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/leanprover-community/highlightjs-lean/dist/lean.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark" disabled>
+    <style>
+        :root {
+            --bg: #fafaf8;
+            --bg-card: #ffffff;
+            --text: #2c2c2c;
+            --text-muted: #6b6b6b;
+            --border: #e0ddd8;
+            --accent: #4a7c59;
+            --accent-hover: #3d6649;
+            --tag-bg: #e8f0eb;
+            --tag-text: #3d6649;
+            --tag-active-bg: #4a7c59;
+            --tag-active-text: #ffffff;
+            --code-bg: #f5f4f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06);
+            --robot-header-bg: #f0eeea;
+            --search-bg: #ffffff;
+            --toggle-bg: #e0ddd8;
+        }
+
+        [data-theme="dark"] {
+            --bg: #1a1a1e;
+            --bg-card: #25252a;
+            --text: #e0ddd8;
+            --text-muted: #9a9a9a;
+            --border: #3a3a3f;
+            --accent: #7ab88a;
+            --accent-hover: #93cca1;
+            --tag-bg: #2a3a2e;
+            --tag-text: #93cca1;
+            --tag-active-bg: #7ab88a;
+            --tag-active-text: #1a1a1e;
+            --code-bg: #1e1e22;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --robot-header-bg: #22222a;
+            --search-bg: #2a2a30;
+            --toggle-bg: #3a3a3f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Alegreya Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .robot-header {
+            background: var(--robot-header-bg);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .top-bar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .top-bar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            max-width: 400px;
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Alegreya Sans', sans-serif;
+            font-size: 0.95rem;
+            background: var(--search-bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s, background 0.3s;
+        }
+
+        .search-box:focus {
+            border-color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: var(--toggle-bg);
+            border: none;
+            border-radius: 20px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-family: 'Alegreya Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+            white-space: nowrap;
+        }
+
+        .theme-toggle:hover {
+            opacity: 0.8;
+        }
+
+        .tag-bar {
+            padding: 12px 32px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .tag-pill {
+            padding: 4px 12px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            background: var(--tag-bg);
+            color: var(--tag-text);
+            cursor: pointer;
+            border: none;
+            font-family: 'Alegreya Sans', sans-serif;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .tag-pill:hover {
+            opacity: 0.85;
+        }
+
+        .tag-pill.active {
+            background: var(--tag-active-bg);
+            color: var(--tag-active-text);
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        .entry-count {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .entry-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .entry-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .entry-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .entry-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .entry-tag {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            background: var(--tag-bg);
+            color: var(--tag-text);
+            cursor: pointer;
+            border: none;
+            font-family: 'Alegreya Sans', sans-serif;
+        }
+
+        .entry-tag:hover {
+            opacity: 0.85;
+        }
+
+        .entry-description {
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        .entry-description p {
+            margin-bottom: 0.8em;
+        }
+
+        .entry-description code {
+            background: var(--code-bg);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-family: 'JuliaMono', monospace;
+        }
+
+        .code-section {
+            margin-bottom: 16px;
+        }
+
+        .code-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .code-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 700px) {
+            .code-columns {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .entry-card pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px;
+            overflow-x: auto;
+            font-family: 'JuliaMono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .entry-card pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .source-link {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .source-link:hover {
+            text-decoration: underline;
+            color: var(--accent-hover);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="robot-header">&#129302; Built and curated by Claude Code</div>
+    <div class="top-bar">
+        <h1>Lean Improvement Case Studies</h1>
+        <input type="text" class="search-box" placeholder="Search entries..." id="search">
+        <button class="theme-toggle" id="theme-toggle">&#9790; Dark</button>
+    </div>
+    <div class="tag-bar" id="tag-bar"></div>
+    <div class="container">
+        <div class="loading" id="loading">Loading database...</div>
+        <div id="entry-count" class="entry-count" style="display:none;"></div>
+        <div id="entries"></div>
+    </div>
+
+    <script>
+        let db = null;
+        let allEntries = [];
+        let allTags = [];
+        let activeTag = null;
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            applyTheme(saved);
+        }
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const btn = document.getElementById('theme-toggle');
+            const lightCss = document.getElementById('hljs-light');
+            const darkCss = document.getElementById('hljs-dark');
+            if (theme === 'dark') {
+                btn.textContent = '\u2600 Light';
+                lightCss.disabled = true;
+                darkCss.disabled = false;
+            } else {
+                btn.textContent = '\u263E Dark';
+                lightCss.disabled = false;
+                darkCss.disabled = true;
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            var current = document.documentElement.getAttribute('data-theme') || 'light';
+            applyTheme(current === 'light' ? 'dark' : 'light');
+            document.querySelectorAll('pre code').forEach(function(el) { hljs.highlightElement(el); });
+        });
+
+        async function loadDB() {
+            var SQL = await initSqlJs({
+                locateFile: function(file) { return 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/' + file; }
+            });
+
+            try {
+                var response = await fetch('db/cases.db');
+                var buf = await response.arrayBuffer();
+                db = new SQL.Database(new Uint8Array(buf));
+                loadEntries();
+            } catch (e) {
+                document.getElementById('loading').textContent =
+                    'Could not load database. Make sure db/cases.db is accessible.';
+                console.error(e);
+            }
+        }
+
+        function loadEntries() {
+            var results = db.exec(
+                "SELECT id, title, tags, description, before_code, after_code, source_link, source_date, created_at FROM entries ORDER BY source_date DESC, created_at DESC"
+            );
+
+            if (results.length === 0) {
+                allEntries = [];
+            } else {
+                var cols = results[0].columns;
+                allEntries = results[0].values.map(function(row) {
+                    var entry = {};
+                    cols.forEach(function(col, i) { entry[col] = row[i]; });
+                    return entry;
+                });
+            }
+
+            var tagSet = new Set();
+            allEntries.forEach(function(e) {
+                if (e.tags) {
+                    e.tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean).forEach(function(t) { tagSet.add(t); });
+                }
+            });
+            allTags = Array.from(tagSet).sort();
+
+            document.getElementById('loading').style.display = 'none';
+            renderTagBar();
+            renderEntries();
+        }
+
+        function renderTagBar() {
+            var bar = document.getElementById('tag-bar');
+            if (allTags.length === 0) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = '';
+            bar.innerHTML = allTags.map(function(tag) {
+                return '<button class="tag-pill' + (activeTag === tag ? ' active' : '') + '" data-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '</button>';
+            }).join('');
+
+            bar.querySelectorAll('.tag-pill').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var tag = btn.getAttribute('data-tag');
+                    activeTag = activeTag === tag ? null : tag;
+                    renderTagBar();
+                    renderEntries();
+                });
+            });
+        }
+
+        function renderEntries() {
+            var searchTerm = document.getElementById('search').value.toLowerCase();
+            var filtered = allEntries;
+
+            if (activeTag) {
+                filtered = filtered.filter(function(e) {
+                    return e.tags && e.tags.split(',').map(function(t) { return t.trim(); }).indexOf(activeTag) !== -1;
+                });
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(function(e) {
+                    return (e.title && e.title.toLowerCase().indexOf(searchTerm) !== -1) ||
+                        (e.description && e.description.toLowerCase().indexOf(searchTerm) !== -1) ||
+                        (e.tags && e.tags.toLowerCase().indexOf(searchTerm) !== -1);
+                });
+            }
+
+            var container = document.getElementById('entries');
+            var countEl = document.getElementById('entry-count');
+
+            if (filtered.length === 0 && allEntries.length === 0) {
+                countEl.style.display = 'none';
+                container.innerHTML = '<div class="empty-state"><p>No entries yet.</p></div>';
+                return;
+            }
+
+            if (filtered.length === 0) {
+                countEl.style.display = 'block';
+                countEl.textContent = 'No matching entries';
+                container.innerHTML = '';
+                return;
+            }
+
+            countEl.style.display = 'block';
+            countEl.textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies');
+
+            container.innerHTML = filtered.map(function(entry) {
+                var tags = '';
+                if (entry.tags) {
+                    tags = entry.tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean)
+                        .map(function(t) { return '<button class="entry-tag" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</button>'; }).join('');
+                }
+
+                var date = '';
+                var dateStr = entry.source_date || entry.created_at;
+                if (dateStr) {
+                    date = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                }
+
+                var description = '';
+                if (entry.description) {
+                    description = '<div class="entry-description">' + marked.parse(entry.description) + '</div>';
+                }
+
+                var codeHtml = '';
+                if (entry.before_code && entry.after_code) {
+                    codeHtml =
+                        '<div class="code-columns">' +
+                            '<div class="code-section">' +
+                                '<div class="code-label">Before</div>' +
+                                '<pre><code class="language-lean">' + escapeHtml(entry.before_code) + '</code></pre>' +
+                            '</div>' +
+                            '<div class="code-section">' +
+                                '<div class="code-label">After</div>' +
+                                '<pre><code class="language-lean">' + escapeHtml(entry.after_code) + '</code></pre>' +
+                            '</div>' +
+                        '</div>';
+                } else if (entry.before_code || entry.after_code) {
+                    var code = entry.before_code || entry.after_code;
+                    codeHtml =
+                        '<div class="code-section">' +
+                            '<div class="code-label">Code</div>' +
+                            '<pre><code class="language-lean">' + escapeHtml(code) + '</code></pre>' +
+                        '</div>';
+                }
+
+                var sourceHtml = '';
+                if (entry.source_link) {
+                    sourceHtml = '<a class="source-link" href="' + escapeHtml(entry.source_link) + '" target="_blank" rel="noopener">\uD83D\uDD17 Source</a>';
+                }
+
+                return '<div class="entry-card">' +
+                    '<div class="entry-header">' +
+                        '<div class="entry-title">' + escapeHtml(entry.title) + '</div>' +
+                        '<div class="entry-date">' + date + '</div>' +
+                    '</div>' +
+                    (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
+                    description +
+                    codeHtml +
+                    sourceHtml +
+                '</div>';
+            }).join('');
+
+            container.querySelectorAll('pre code').forEach(function(el) { hljs.highlightElement(el); });
+
+            container.querySelectorAll('.entry-tag').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    activeTag = btn.getAttribute('data-tag');
+                    renderTagBar();
+                    renderEntries();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        document.getElementById('search').addEventListener('input', renderEntries);
+
+        initTheme();
+        loadDB();
+    </script>
+</body>
+</html>

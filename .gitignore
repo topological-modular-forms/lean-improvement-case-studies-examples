@@ -1,0 +1,5 @@
+# Large data files (working data, not part of the site)
+db/*.json
+
+# Scraper scripts (not part of the site)
+fetch_*.py
