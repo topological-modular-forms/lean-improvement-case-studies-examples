@@ -402,6 +402,20 @@
             font-family: 'Alegreya Sans', sans-serif;
             font-size: 0.85rem;
         }
+
+        .entry-card.highlighted {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent), var(--shadow);
+        }
+
+        .entry-gerby-link {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .entry-gerby-link:hover .entry-gerby {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -512,6 +526,7 @@
             document.getElementById('loading').style.display = 'none';
             renderTagBar();
             renderEntries();
+            navigateToHash();
         }
 
         function renderTagBar() {
@@ -656,9 +671,10 @@
                     sourceHtml = '<a class="source-link" href="' + escapeHtml(entry.source_link) + '" target="_blank" rel="noopener">\uD83D\uDD17 Source</a>';
                 }
 
-                var gerbyHtml = entry.gerby_tag ? '<span class="entry-gerby">' + escapeHtml(entry.gerby_tag) + '</span> ' : '';
+                var gerbyHtml = entry.gerby_tag ? '<a class="entry-gerby-link" href="#' + escapeHtml(entry.gerby_tag) + '"><span class="entry-gerby">' + escapeHtml(entry.gerby_tag) + '</span></a> ' : '';
+                var entryId = entry.gerby_tag ? ' id="entry-' + escapeHtml(entry.gerby_tag) + '"' : '';
 
-                return '<div class="entry-card">' +
+                return '<div class="entry-card"' + entryId + '>' +
                     '<div class="entry-header">' +
                         '<div class="entry-title">' + gerbyHtml + escapeHtml(entry.title) + '</div>' +
                         '<div class="entry-date">' + date + '</div>' +
@@ -689,6 +705,19 @@
             div.textContent = str;
             return div.innerHTML;
         }
+
+        function navigateToHash() {
+            var hash = window.location.hash.replace('#', '');
+            if (!hash) return;
+            var el = document.getElementById('entry-' + hash);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlighted');
+                setTimeout(function() { el.classList.remove('highlighted'); }, 2000);
+            }
+        }
+
+        window.addEventListener('hashchange', navigateToHash);
 
         document.getElementById('search').addEventListener('input', renderEntries);
         document.getElementById('filter-interesting').addEventListener('change', renderEntries);
