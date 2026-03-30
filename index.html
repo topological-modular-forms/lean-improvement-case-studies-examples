@@ -218,6 +218,17 @@
             white-space: nowrap;
         }
 
+        .entry-gerby {
+            font-family: 'JuliaMono', monospace;
+            font-size: 0.75rem;
+            background: var(--tag-bg);
+            color: var(--tag-text);
+            padding: 2px 6px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+
         .entry-tags {
             display: flex;
             gap: 6px;
@@ -326,6 +337,71 @@
             color: var(--text-muted);
             font-size: 1.1rem;
         }
+
+        .entry-ratings {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 14px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .rating-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .rating-label {
+            font-weight: 500;
+        }
+
+        .rating-bar {
+            display: inline-flex;
+            gap: 2px;
+        }
+
+        .rating-pip {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            background: var(--border);
+        }
+
+        .rating-pip.filled {
+            background: var(--accent);
+        }
+
+        .rating-pip.filled.high {
+            background: #c0392b;
+        }
+
+        .filter-bar {
+            padding: 10px 32px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        .filter-bar label {
+            font-weight: 500;
+        }
+
+        .filter-bar select {
+            padding: 3px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--search-bg);
+            color: var(--text);
+            font-family: 'Alegreya Sans', sans-serif;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -336,6 +412,14 @@
         <button class="theme-toggle" id="theme-toggle">&#9790; Dark</button>
     </div>
     <div class="tag-bar" id="tag-bar"></div>
+    <div class="filter-bar" id="filter-bar" style="display:none;">
+        <label>Min interesting:</label>
+        <select id="filter-interesting"><option value="0">Any</option><option value="1">1+</option><option value="3">3+</option><option value="5">5+</option><option value="7">7+</option><option value="9">9+</option></select>
+        <label>Min important:</label>
+        <select id="filter-important"><option value="0">Any</option><option value="1">1+</option><option value="3">3+</option><option value="5">5+</option><option value="7">7+</option><option value="9">9+</option></select>
+        <label>Max advanced:</label>
+        <select id="filter-advanced"><option value="5">Any</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>
+    </div>
     <div class="container">
         <div class="loading" id="loading">Loading database...</div>
         <div id="entry-count" class="entry-count" style="display:none;"></div>
@@ -395,7 +479,7 @@
 
         function loadEntries() {
             var results = db.exec(
-                "SELECT id, title, tags, description, before_code, after_code, source_link, source_date, created_at FROM entries ORDER BY source_date DESC, created_at DESC"
+                "SELECT id, title, tags, description, before_code, after_code, source_link, source_date, created_at, rating_interesting, rating_important, rating_advanced, gerby_tag FROM entries ORDER BY source_date DESC, created_at DESC"
             );
 
             if (results.length === 0) {
@@ -416,6 +500,14 @@
                 }
             });
             allTags = Array.from(tagSet).sort();
+
+            // Show filter bar if any entries have ratings
+            var hasRatings = allEntries.some(function(e) {
+                return e.rating_interesting != null || e.rating_important != null || e.rating_advanced != null;
+            });
+            if (hasRatings) {
+                document.getElementById('filter-bar').style.display = '';
+            }
 
             document.getElementById('loading').style.display = 'none';
             renderTagBar();
@@ -443,8 +535,22 @@
             });
         }
 
+        function makeRatingPips(value, max) {
+            if (value == null) return '';
+            var html = '<span class="rating-bar">';
+            for (var i = 1; i <= max; i++) {
+                var cls = i <= value ? (i >= max * 0.8 ? 'rating-pip filled high' : 'rating-pip filled') : 'rating-pip';
+                html += '<span class="' + cls + '"></span>';
+            }
+            html += '</span>';
+            return html;
+        }
+
         function renderEntries() {
             var searchTerm = document.getElementById('search').value.toLowerCase();
+            var minInteresting = parseInt(document.getElementById('filter-interesting').value) || 0;
+            var minImportant = parseInt(document.getElementById('filter-important').value) || 0;
+            var maxAdvanced = parseInt(document.getElementById('filter-advanced').value) || 5;
             var filtered = allEntries;
 
             if (activeTag) {
@@ -459,6 +565,16 @@
                         (e.description && e.description.toLowerCase().indexOf(searchTerm) !== -1) ||
                         (e.tags && e.tags.toLowerCase().indexOf(searchTerm) !== -1);
                 });
+            }
+
+            if (minInteresting > 0) {
+                filtered = filtered.filter(function(e) { return (e.rating_interesting || 0) >= minInteresting; });
+            }
+            if (minImportant > 0) {
+                filtered = filtered.filter(function(e) { return (e.rating_important || 0) >= minImportant; });
+            }
+            if (maxAdvanced < 5) {
+                filtered = filtered.filter(function(e) { return (e.rating_advanced || 5) <= maxAdvanced; });
             }
 
             var container = document.getElementById('entries');
@@ -493,6 +609,21 @@
                     date = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
                 }
 
+                var ratingsHtml = '';
+                if (entry.rating_interesting != null || entry.rating_important != null || entry.rating_advanced != null) {
+                    ratingsHtml = '<div class="entry-ratings">';
+                    if (entry.rating_interesting != null) {
+                        ratingsHtml += '<span class="rating-item"><span class="rating-label">Interesting:</span> ' + makeRatingPips(entry.rating_interesting, 10) + '</span>';
+                    }
+                    if (entry.rating_important != null) {
+                        ratingsHtml += '<span class="rating-item"><span class="rating-label">Important:</span> ' + makeRatingPips(entry.rating_important, 10) + '</span>';
+                    }
+                    if (entry.rating_advanced != null) {
+                        ratingsHtml += '<span class="rating-item"><span class="rating-label">Advanced:</span> ' + makeRatingPips(entry.rating_advanced, 5) + '</span>';
+                    }
+                    ratingsHtml += '</div>';
+                }
+
                 var description = '';
                 if (entry.description) {
                     description = '<div class="entry-description">' + marked.parse(entry.description) + '</div>';
@@ -525,12 +656,15 @@
                     sourceHtml = '<a class="source-link" href="' + escapeHtml(entry.source_link) + '" target="_blank" rel="noopener">\uD83D\uDD17 Source</a>';
                 }
 
+                var gerbyHtml = entry.gerby_tag ? '<span class="entry-gerby">' + escapeHtml(entry.gerby_tag) + '</span> ' : '';
+
                 return '<div class="entry-card">' +
                     '<div class="entry-header">' +
-                        '<div class="entry-title">' + escapeHtml(entry.title) + '</div>' +
+                        '<div class="entry-title">' + gerbyHtml + escapeHtml(entry.title) + '</div>' +
                         '<div class="entry-date">' + date + '</div>' +
                     '</div>' +
                     (tags ? '<div class="entry-tags">' + tags + '</div>' : '') +
+                    ratingsHtml +
                     description +
                     codeHtml +
                     sourceHtml +
@@ -557,6 +691,9 @@
         }
 
         document.getElementById('search').addEventListener('input', renderEntries);
+        document.getElementById('filter-interesting').addEventListener('change', renderEntries);
+        document.getElementById('filter-important').addEventListener('change', renderEntries);
+        document.getElementById('filter-advanced').addEventListener('change', renderEntries);
 
         initTheme();
         loadDB();

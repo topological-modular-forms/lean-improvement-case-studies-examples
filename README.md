@@ -59,7 +59,70 @@ Single table `entries`:
 | `after_code` | TEXT | Improved code (optional) |
 | `source_link` | TEXT | URL to source (optional) |
 | `source_date` | TEXT | Date of original discussion (YYYY-MM-DD) |
+| `rating_interesting` | INTEGER | How interesting (1-10) |
+| `rating_important` | INTEGER | How important (1-10) |
+| `rating_advanced` | INTEGER | How advanced (1-5) |
+| `gerby_tag` | TEXT | Gerby-style tag (e.g., `0101`) |
+| `is_reviewed` | INTEGER | Whether Emily has reviewed this entry (0/1) |
 | `created_at` | TEXT | Timestamp, auto-set on insert |
+
+### Gerby tag scheme
+
+Tags follow the format `XXYY` where `XX` is the category and `YY` is the sequence within that category.
+
+| Prefix | Category |
+|--------|----------|
+| `01` | Typeclass hierarchy & design |
+| `02` | Performance (instance/elaboration) |
+| `03` | Definitional equality & transparency |
+| `04` | Tactics & automation |
+| `05` | API design & refactoring |
+| `06` | Style & conventions |
+| `07` | Community policy & process |
+| `08` | Metaprogramming & tooling |
+
+## Rating guidelines
+
+Each entry has three ratings. These are designed to help readers find entries appropriate to their level and interests.
+
+### Interesting (1–10): How surprising or insightful is this?
+
+| Score | Meaning | Examples |
+|-------|---------|---------|
+| 1–2 | Routine, mechanical change. No surprise. | Whitespace fixes, trivial renames |
+| 3–4 | Useful to know, but predictable once stated. | Simple post-port cleanup, notation migration |
+| 5–6 | Notable insight. Moderately surprising or a useful pattern. | Making a definition irreducible for speed, adding explicit projections |
+| 7–8 | Very surprising or elegant. Teaches something non-obvious about Lean. | Extends clause ordering affects performance; removing features improves a tactic; accidental global instances cause slowdowns |
+| 9–10 | Genuinely mind-blowing or counter-intuitive. Changes how you think about Lean. | Renaming a universe variable gives 200x speedup; the mixin philosophy that drove years of refactoring |
+
+### Important (1–10): How much does knowing this matter for practical Lean development?
+
+| Score | Meaning | Examples |
+|-------|---------|---------|
+| 1–2 | Niche, affects very few users or files. | A specific workaround for one file |
+| 3–4 | Relevant to a specific mathematical area. | Number theory-specific instance speedup |
+| 5–6 | Broadly relevant to many mathlib contributors. | API design principle, tactic usage pattern |
+| 7–8 | Essential knowledge for regular mathlib contributors. | Instance priority patterns, simp robustness, naming conventions |
+| 9–10 | Fundamental principle that shapes all Lean 4 development. | The mixin typeclass philosophy, the one-field structure pattern for concrete categories |
+
+### Advanced (1–5): How much Lean expertise is needed to understand and apply this?
+
+| Score | Meaning | Prerequisites |
+|-------|---------|---------------|
+| 1 | Beginner | Basic Lean syntax, simple tactic proofs |
+| 2 | Intermediate | Typeclasses, `simp`, `rw`, common mathlib patterns, basic API design |
+| 3 | Advanced | Elaboration strategy, instance synthesis, transparency levels, API design principles |
+| 4 | Expert | Kernel definitional equality, discrimination trees, universe unification, metaprogramming |
+| 5 | Lean internals | Lean 4 compiler/kernel implementation, elaborator internals, custom elaborators |
+
+## TODO
+
+- [ ] Mine discussions from large formalization projects (FLT, Carleson, sphere eversion, Brownian motion, PFR, etc.) for improvement case studies specific to large-scale formalization challenges
+- [ ] Process remaining Tier 3–5 PRs (~5,000 more)
+- [ ] Cross-reference full Zulip archive (46k topics) with PR data to find discussions not linked to any PR
+- [ ] Add entries from lean4 repo issues/PRs (not just mathlib4)
+- [ ] Mine GitHub Issues discussions (not just PRs) — mathlib4 has ~2,500+ issues with design discussions, bug reports that reveal improvement patterns, and feature requests
+- [ ] Fetch and process full comment threads for all PRs with discussion (done — 36,386 PRs fetched)
 
 ## Features
 
