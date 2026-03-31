@@ -416,6 +416,24 @@
         .entry-gerby-link:hover .entry-gerby {
             opacity: 0.8;
         }
+
+        .show-more-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 28px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-card);
+            color: var(--text);
+            font-family: 'Alegreya Sans', sans-serif;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.3s;
+        }
+
+        .show-more-btn:hover {
+            border-color: var(--accent);
+        }
     </style>
 </head>
 <body>
@@ -445,6 +463,9 @@
         let allEntries = [];
         let allTags = [];
         let activeTag = null;
+        var BATCH_SIZE = 50;
+        var displayLimit = BATCH_SIZE;
+        var lastFiltered = [];
 
         function initTheme() {
             const saved = localStorage.getItem('theme') || 'light';
@@ -544,6 +565,7 @@
                 btn.addEventListener('click', function() {
                     var tag = btn.getAttribute('data-tag');
                     activeTag = activeTag === tag ? null : tag;
+                    displayLimit = BATCH_SIZE;
                     renderTagBar();
                     renderEntries();
                 });
@@ -608,10 +630,15 @@
                 return;
             }
 
-            countEl.style.display = 'block';
-            countEl.textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies');
+            lastFiltered = filtered;
+            var hasMore = filtered.length > displayLimit;
+            var visible = filtered.slice(0, displayLimit);
 
-            container.innerHTML = filtered.map(function(entry) {
+            countEl.style.display = 'block';
+            countEl.textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies') +
+                (hasMore ? ' (showing ' + visible.length + ')' : '');
+
+            container.innerHTML = visible.map(function(entry) {
                 var tags = '';
                 if (entry.tags) {
                     tags = entry.tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean)
@@ -687,11 +714,23 @@
                 '</div>';
             }).join('');
 
+            if (hasMore) {
+                var btn = document.createElement('button');
+                btn.className = 'show-more-btn';
+                btn.textContent = 'Show more (' + (filtered.length - visible.length) + ' remaining)';
+                btn.addEventListener('click', function() {
+                    displayLimit += BATCH_SIZE;
+                    renderEntries();
+                });
+                container.appendChild(btn);
+            }
+
             container.querySelectorAll('pre code').forEach(function(el) { hljs.highlightElement(el); });
 
             container.querySelectorAll('.entry-tag').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     activeTag = btn.getAttribute('data-tag');
+                    displayLimit = BATCH_SIZE;
                     renderTagBar();
                     renderEntries();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -710,6 +749,17 @@
             var hash = window.location.hash.replace('#', '');
             if (!hash) return;
             var el = document.getElementById('entry-' + hash);
+            if (!el) {
+                // Entry might be beyond displayLimit — find its index and expand
+                for (var i = 0; i < lastFiltered.length; i++) {
+                    if (lastFiltered[i].gerby_tag === hash) {
+                        displayLimit = i + 1;
+                        renderEntries();
+                        el = document.getElementById('entry-' + hash);
+                        break;
+                    }
+                }
+            }
             if (el) {
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 el.classList.add('highlighted');
@@ -719,10 +769,11 @@
 
         window.addEventListener('hashchange', navigateToHash);
 
-        document.getElementById('search').addEventListener('input', renderEntries);
-        document.getElementById('filter-interesting').addEventListener('change', renderEntries);
-        document.getElementById('filter-important').addEventListener('change', renderEntries);
-        document.getElementById('filter-advanced').addEventListener('change', renderEntries);
+        function resetAndRender() { displayLimit = BATCH_SIZE; renderEntries(); }
+        document.getElementById('search').addEventListener('input', resetAndRender);
+        document.getElementById('filter-interesting').addEventListener('change', resetAndRender);
+        document.getElementById('filter-important').addEventListener('change', resetAndRender);
+        document.getElementById('filter-advanced').addEventListener('change', resetAndRender);
 
         initTheme();
         loadDB();
