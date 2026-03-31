@@ -62,24 +62,13 @@ Single table `entries`:
 | `rating_interesting` | INTEGER | How interesting (1-10) |
 | `rating_important` | INTEGER | How important (1-10) |
 | `rating_advanced` | INTEGER | How advanced (1-5) |
-| `gerby_tag` | TEXT | Gerby-style tag (e.g., `0101`) |
+| `gerby_tag` | TEXT | Gerby-style tag (e.g., `000P`) |
 | `is_reviewed` | INTEGER | Whether Emily has reviewed this entry (0/1) |
 | `created_at` | TEXT | Timestamp, auto-set on insert |
 
 ### Gerby tag scheme
 
-Tags follow the format `XXYY` where `XX` is the category and `YY` is the sequence within that category.
-
-| Prefix | Category |
-|--------|----------|
-| `01` | Typeclass hierarchy & design |
-| `02` | Performance (instance/elaboration) |
-| `03` | Definitional equality & transparency |
-| `04` | Tactics & automation |
-| `05` | API design & refactoring |
-| `06` | Style & conventions |
-| `07` | Community policy & process |
-| `08` | Metaprogramming & tooling |
+Tags are 4-character codes using the alphabet `0123456789ABCDEFGHIJKLMNPQRSTUVWXYZ` (base-35, no letter O). They are assigned sequentially starting from `0000`, following the same scheme as the [Stacks project](https://stacks.math.columbia.edu/). Tags are permanent — once assigned, they never change.
 
 ## Rating guidelines
 
@@ -121,8 +110,7 @@ Each entry has three ratings. These are designed to help readers find entries ap
 - [ ] Process remaining Tier 3–5 PRs (~5,000 more)
 - [ ] Cross-reference full Zulip archive (46k topics) with PR data to find discussions not linked to any PR
 - [ ] Add entries from lean4 repo issues/PRs (not just mathlib4)
-- [ ] Mine GitHub Issues discussions (not just PRs) — mathlib4 has ~2,500+ issues with design discussions, bug reports that reveal improvement patterns, and feature requests
-- [ ] Fetch and process full comment threads for all PRs with discussion (done — 36,386 PRs fetched)
+- [ ] Fetch and process full comment threads for all PRs with discussion (~22 hour job)
 
 ## Features
 

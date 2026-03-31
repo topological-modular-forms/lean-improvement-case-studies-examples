@@ -466,6 +466,7 @@
         var BATCH_SIZE = 50;
         var displayLimit = BATCH_SIZE;
         var lastFiltered = [];
+        var hashFilter = null;
 
         function initTheme() {
             const saved = localStorage.getItem('theme') || 'light';
@@ -584,6 +585,34 @@
         }
 
         function renderEntries() {
+            var container = document.getElementById('entries');
+            var countEl = document.getElementById('entry-count');
+
+            // Deep link filter: show only the targeted entry
+            if (hashFilter) {
+                var target = allEntries.filter(function(e) { return e.gerby_tag === hashFilter; });
+                if (target.length > 0) {
+                    countEl.style.display = 'block';
+                    countEl.textContent = 'Showing entry ' + hashFilter + '. ';
+                    var link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = 'Show all entries';
+                    link.style.color = 'var(--accent)';
+                    link.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        hashFilter = null;
+                        history.replaceState(null, '', window.location.pathname);
+                        renderEntries();
+                    });
+                    countEl.appendChild(link);
+                    lastFiltered = target;
+                    renderVisibleEntries(container, target, false);
+                    return;
+                }
+                // Tag not found — fall through to normal view
+                hashFilter = null;
+            }
+
             var searchTerm = document.getElementById('search').value.toLowerCase();
             var minInteresting = parseInt(document.getElementById('filter-interesting').value) || 0;
             var minImportant = parseInt(document.getElementById('filter-important').value) || 0;
@@ -614,9 +643,6 @@
                 filtered = filtered.filter(function(e) { return (e.rating_advanced || 5) <= maxAdvanced; });
             }
 
-            var container = document.getElementById('entries');
-            var countEl = document.getElementById('entry-count');
-
             if (filtered.length === 0 && allEntries.length === 0) {
                 countEl.style.display = 'none';
                 container.innerHTML = '<div class="empty-state"><p>No entries yet.</p></div>';
@@ -638,7 +664,11 @@
             countEl.textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies') +
                 (hasMore ? ' (showing ' + visible.length + ')' : '');
 
-            container.innerHTML = visible.map(function(entry) {
+            renderVisibleEntries(container, visible, hasMore ? filtered.length - visible.length : 0);
+        }
+
+        function renderVisibleEntries(container, entries, remaining) {
+            container.innerHTML = entries.map(function(entry) {
                 var tags = '';
                 if (entry.tags) {
                     tags = entry.tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean)
@@ -714,10 +744,10 @@
                 '</div>';
             }).join('');
 
-            if (hasMore) {
+            if (remaining > 0) {
                 var btn = document.createElement('button');
                 btn.className = 'show-more-btn';
-                btn.textContent = 'Show more (' + (filtered.length - visible.length) + ' remaining)';
+                btn.textContent = 'Show more (' + remaining + ' remaining)';
                 btn.addEventListener('click', function() {
                     displayLimit += BATCH_SIZE;
                     renderEntries();
@@ -748,23 +778,8 @@
         function navigateToHash() {
             var hash = window.location.hash.replace('#', '');
             if (!hash) return;
-            var el = document.getElementById('entry-' + hash);
-            if (!el) {
-                // Entry might be beyond displayLimit — find its index and expand
-                for (var i = 0; i < lastFiltered.length; i++) {
-                    if (lastFiltered[i].gerby_tag === hash) {
-                        displayLimit = i + 1;
-                        renderEntries();
-                        el = document.getElementById('entry-' + hash);
-                        break;
-                    }
-                }
-            }
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.classList.add('highlighted');
-                setTimeout(function() { el.classList.remove('highlighted'); }, 2000);
-            }
+            hashFilter = hash;
+            renderEntries();
         }
 
         window.addEventListener('hashchange', navigateToHash);
